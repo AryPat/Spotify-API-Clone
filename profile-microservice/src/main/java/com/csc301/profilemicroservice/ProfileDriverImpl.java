@@ -38,18 +38,25 @@ public class ProfileDriverImpl implements ProfileDriver {
 		}
 	}
 	
+    /**
+     * 
+     * Create Profile
+     * 
+     * @param userName the user name
+     * @param fullName the full name
+     * @param password the password
+     * @return dbQueryStatus the status of the request
+     */
 	@Override
 	public DbQueryStatus createUserProfile(String userName, String fullName, String password) {
 		
 		StatementResult existsResult = null;
-		
 		DbQueryStatus dbQueryStatus = null;
 		
 		try (Session session = driver.session()) {			
 			try (Transaction trans = session.beginTransaction()) {
 				
-				// Check if user name already exists
-				
+				// Check if user name already exists				
 				String existsQuery = "MATCH (p:profile {userName: \"" + userName + "\"}) RETURN p";
 				
 				existsResult = trans.run(existsQuery);
@@ -69,14 +76,21 @@ public class ProfileDriverImpl implements ProfileDriver {
 				
 				trans.run(query);
 				dbQueryStatus = new DbQueryStatus("Created user profile", DbQueryExecResult.QUERY_OK);
-				trans.success();
-				
+				trans.success();				
 			}			
 			session.close();
 		}
 		return dbQueryStatus;
 	}
 
+    /**
+     * 
+     * Follow a friend
+     * 
+     * @param userName the user name
+     * @param frndUserName the friends user name
+     * @return dbQueryStatus the status of the request
+     */
 	@Override
 	public DbQueryStatus followFriend(String userName, String frndUserName) {
 		
@@ -86,8 +100,7 @@ public class ProfileDriverImpl implements ProfileDriver {
 		try (Session session = driver.session()) {
 			try (Transaction trans = session.beginTransaction()) {
 
-			    // Check if userName or friendUserName exist or not 
-			    
+			    // Check if userName or friendUserName exist or not 			    
 			    String checkUserName = "MATCH (p:profile {userName: \"" + userName + "\"}) RETURN p";
 			    String checkfriendUserName = "MATCH (p:profile {userName: \"" + frndUserName + "\"}) RETURN p";
 			    
@@ -102,10 +115,8 @@ public class ProfileDriverImpl implements ProfileDriver {
                     trans.failure();
                     return dbQueryStatus;
                 }
-			    
-			    
+			    			    
 				// Check if userName is already following frndUserName
-
 				String existsQuery = "MATCH (a:profile), (b:profile) WHERE a.userName = \"" + userName +  "\" AND b.userName = \"" + frndUserName + "\" \n" +
 						"MATCH (a)-[f:follows]->(b) \n" + "RETURN f";
 				
@@ -126,14 +137,20 @@ public class ProfileDriverImpl implements ProfileDriver {
 				trans.run(query);
 				dbQueryStatus = new DbQueryStatus("Created relation", DbQueryExecResult.QUERY_OK);				
 				trans.success();
-
 			}
 			session.close();
-		}
-			
+		}			
 		return dbQueryStatus;
 	}
 
+    /**
+     * 
+     * Un-follow a friend
+     * 
+     * @param userName the user name
+     * @param frndUserName the friends user name
+     * @return dbQueryStatus the status of the request
+     */
 	@Override
 	public DbQueryStatus unfollowFriend(String userName, String frndUserName) {
 		
@@ -145,7 +162,6 @@ public class ProfileDriverImpl implements ProfileDriver {
 			try (Transaction trans = session.beginTransaction()) {
 
 				// Check if userName is following frndUserName
-
 				String existsQuery = "MATCH (a:profile), (b:profile) WHERE a.userName = \"" + userName +  "\" AND b.userName = \"" + frndUserName + "\" \n" +
 						"MATCH (a)-[f:follows]->(b) \n" + "RETURN f";
 				
@@ -167,17 +183,20 @@ public class ProfileDriverImpl implements ProfileDriver {
 					
 					dbQueryStatus = new DbQueryStatus("User not following", DbQueryExecResult.QUERY_ERROR_NOT_FOUND);
 					trans.failure();
-				}
-				
-				
+				}				
 			}
 			session.close();
-		}
-			
-		return dbQueryStatus;
-		
+		}		
+		return dbQueryStatus;	
 	}
 
+    /**
+     * 
+     * Get all songs friends like
+     * 
+     * @param userName the user name
+     * @return dbQueryStatus the status of the request
+     */
 	@Override
 	public DbQueryStatus getAllSongFriendsLike(String userName) {
 		
@@ -200,15 +219,14 @@ public class ProfileDriverImpl implements ProfileDriver {
                     return new DbQueryStatus("User name does not exist", DbQueryExecResult.QUERY_ERROR_NOT_FOUND);
                 }
 	               
-			    
-				// Get all users that userName follows
-				
+				// Get all users that userName follows	
 				String allUsersFollowedQuery = "MATCH (p:profile),(nProfile:profile) WHERE p.userName = \"" + userName + "\" \n" +
 				"AND (p)-[:follows]->(nProfile) \n" +
 				"RETURN nProfile";
 								
 				allUsersFollowedResult = trans.run(allUsersFollowedQuery);
 				
+				// Map to be returned
 				Map<String, List<String>> allSongsFriendsLike = new HashMap<String, List<String>>();
 				
 				List<Record> allUsersFollowedRecords = allUsersFollowedResult.list();
@@ -217,17 +235,16 @@ public class ProfileDriverImpl implements ProfileDriver {
 				
 				StatementResult songsResult;
 				
+				// Get all friends the user follows
 				for (Record record : allUsersFollowedRecords) {
 					allUsersNamesFollowed.add(record.get(0).get("userName").toString());	
 				}
 				
+				// Get songs friends like
 				for (String name : allUsersNamesFollowed) {
 					
 					String playlistName = name.substring(1, name.length()-1) + "-favourites";
-					
-					
-//					System.out.println(playlistName);
-					
+										
 					String getSongsQuery = "MATCH (p:profile {userName: " + name + " }), (pl:playlist {plName: \"" + playlistName + "\" }) \n" +
 							"MATCH (pl)-[:includes]-(s:song) \n" +
 							"RETURN s";
@@ -238,31 +255,19 @@ public class ProfileDriverImpl implements ProfileDriver {
 					
 					List<String> songList = new ArrayList<String>();
 					
-					for (Record songsRecord : songsResultRecords) {
-					    
-		
-						songList.add(songsRecord.get(0).get("songId").toString().replace("\"", ""));
-						
+					// Remove quotation
+					for (Record songsRecord : songsResultRecords) {					    
+						songList.add(songsRecord.get(0).get("songId").toString().replace("\"", ""));						
 					}
 					
-					
-					allSongsFriendsLike.put(name.replace("\"", ""), songList);
-					
+					// Remove quotation
+					allSongsFriendsLike.put(name.replace("\"", ""), songList);			
 				}
-				
-				System.out.println(allSongsFriendsLike);
-				
 				dbQueryStatus = new DbQueryStatus("Found all songs friends like", DbQueryExecResult.QUERY_OK);
-				dbQueryStatus.setData(allSongsFriendsLike);
-				
-				
-				
-				
+				dbQueryStatus.setData(allSongsFriendsLike);		
 			}
 			session.close();
-		}
-		
-		
+		}				
 		return dbQueryStatus;
 	}
 }

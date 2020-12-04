@@ -11,97 +11,132 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class SongDalImpl implements SongDal {
 
-	private final MongoTemplate db;
+    private final MongoTemplate db;
 
-	@Autowired
-	public SongDalImpl(MongoTemplate mongoTemplate) {
-		this.db = mongoTemplate;
-	}
+    @Autowired
+    public SongDalImpl(MongoTemplate mongoTemplate) {
+        this.db = mongoTemplate;
+    }
 
-	@Override
-	public DbQueryStatus addSong(Song songToAdd) {
-		db.insert(songToAdd);
-		DbQueryStatus dbQueryStatus = new DbQueryStatus("Added the song", DbQueryExecResult.QUERY_OK);
-		dbQueryStatus.setData(songToAdd);
+    /**
+     * 
+     * Add a song to MongoDb
+     * 
+     * @param songToAdd the song to be added
+     * @return dbQueryStatus the status of the request
+     */
+    @Override
+    public DbQueryStatus addSong(Song songToAdd) {
+        db.insert(songToAdd);
+        DbQueryStatus dbQueryStatus = new DbQueryStatus("Added the song", DbQueryExecResult.QUERY_OK);
+        dbQueryStatus.setData(songToAdd);
 
-		return dbQueryStatus;
-	}
+        return dbQueryStatus;
+    }
 
-	@Override
-	public DbQueryStatus findSongById(String songId) {
-	
-		Song song = db.findById(songId, Song.class);
-		
-		// No such song exist 
-		if(song == null) {
-		    DbQueryStatus dbQueryStatus = new DbQueryStatus("No songs found in DB", DbQueryExecResult.QUERY_ERROR_NOT_FOUND);
-		    return dbQueryStatus;
-		}
-		
-		DbQueryStatus dbQueryStatus = new DbQueryStatus("Song found in DB", DbQueryExecResult.QUERY_OK);
-		dbQueryStatus.setData(song);
-		return dbQueryStatus;
-	}
+    /**
+     * 
+     * Find a song in MongoDb given songId
+     * 
+     * @param songId the song Id
+     * @return dbQueryStatus the status of the request
+     */
+    @Override
+    public DbQueryStatus findSongById(String songId) {
 
-	@Override
-	public DbQueryStatus getSongTitleById(String songId) {
-		
-	    Song song = db.findById(songId, Song.class);
-	    
-	    //No Such songs found
-	    if(song == null) {
-	        return new DbQueryStatus("No song found in DB", DbQueryExecResult.QUERY_ERROR_NOT_FOUND); 
-	    }
-	    
-	    DbQueryStatus dbQueryStatus = new DbQueryStatus("song found in DB", DbQueryExecResult.QUERY_OK);
-	    dbQueryStatus.setData(song.getSongName());
-	    
-		return dbQueryStatus;
-	}
+        Song song = db.findById(songId, Song.class);
 
-	@Override
-	public DbQueryStatus deleteSongById(String songId) {
-		
-	    Song song = db.findById(songId, Song.class);
-	    
-	    if(song == null) {
+        // No such song exist
+        if (song == null) {
+            DbQueryStatus dbQueryStatus =
+                    new DbQueryStatus("No songs found in DB", DbQueryExecResult.QUERY_ERROR_NOT_FOUND);
+            return dbQueryStatus;
+        }
+
+        DbQueryStatus dbQueryStatus = new DbQueryStatus("Song found in DB", DbQueryExecResult.QUERY_OK);
+        dbQueryStatus.setData(song);
+        return dbQueryStatus;
+    }
+
+    /**
+     * 
+     * Get song title given songId
+     * 
+     * @param songId the song Id
+     * @return dbQueryStatus the status of the request
+     */
+    @Override
+    public DbQueryStatus getSongTitleById(String songId) {
+
+        Song song = db.findById(songId, Song.class);
+
+        // No Such songs found
+        if (song == null) {
             return new DbQueryStatus("No song found in DB", DbQueryExecResult.QUERY_ERROR_NOT_FOUND);
-	    }
-	    
-	    this.db.remove(song);
-	    return new DbQueryStatus("Removed song from DB", DbQueryExecResult.QUERY_OK);
-	}
+        }
 
-	@Override
-	public DbQueryStatus updateSongFavouritesCount(String songId, boolean shouldDecrement) {
-		Song exist = db.findById(songId, Song.class);
-		int num;
-		if(exist == null) {
-		    return new DbQueryStatus("No song found in DB", DbQueryExecResult.QUERY_ERROR_NOT_FOUND);
-		}
-	    
-		// you have 0 favourite and you write false 
-		if(exist.getSongAmountFavourites() == 0 && shouldDecrement ) {
-		    return new DbQueryStatus("Cannot have lower than 0 rating", DbQueryExecResult.QUERY_ERROR_GENERIC);
-		}
-		
-		DbQueryStatus dbQueryStatus = new DbQueryStatus("",DbQueryExecResult.QUERY_OK);
-		if(shouldDecrement) {
-		    dbQueryStatus.setMessage("Removed Favourite by 1");
-            num = -1; 
-		    
-		    
-		}
-		else{
-		    num = 1; 
+        DbQueryStatus dbQueryStatus = new DbQueryStatus("song found in DB", DbQueryExecResult.QUERY_OK);
+        dbQueryStatus.setData(song.getSongName());
+
+        return dbQueryStatus;
+    }
+
+    /**
+     * 
+     * Delete Song given songId
+     * 
+     * @param songId the song Id
+     * @return dbQueryStatus the status of the request
+     */
+    @Override
+    public DbQueryStatus deleteSongById(String songId) {
+
+        Song song = db.findById(songId, Song.class);
+
+        if (song == null) {
+            return new DbQueryStatus("No song found in DB", DbQueryExecResult.QUERY_ERROR_NOT_FOUND);
+        }
+
+        this.db.remove(song);
+        return new DbQueryStatus("Removed song from DB", DbQueryExecResult.QUERY_OK);
+    }
+    
+    /**
+     * 
+     * Update Song's Favourite Count 
+     * 
+     * @param songId the song Id
+     * @param shouldDecrement the indicator if you should increase/decrease favourite count
+     * @return dbQueryStatus the status of the request
+     */
+    @Override
+    public DbQueryStatus updateSongFavouritesCount(String songId, boolean shouldDecrement) {
+        Song exist = db.findById(songId, Song.class);
+        int num;
+        if (exist == null) {
+            return new DbQueryStatus("No song found in DB", DbQueryExecResult.QUERY_ERROR_NOT_FOUND);
+        }
+
+        // you have 0 favourite and you write false
+        if (exist.getSongAmountFavourites() == 0 && shouldDecrement) {
+            return new DbQueryStatus("Cannot have lower than 0 rating", DbQueryExecResult.QUERY_ERROR_GENERIC);
+        }
+
+        DbQueryStatus dbQueryStatus = new DbQueryStatus("", DbQueryExecResult.QUERY_OK);
+        if (shouldDecrement) {
+            dbQueryStatus.setMessage("Removed Favourite by 1");
+            num = -1;
+
+
+        } else {
+            num = 1;
             dbQueryStatus.setMessage("Added to favourite by 1");
-		    
-		}
-		
-		exist.setSongAmountFavourites(exist.getSongAmountFavourites() + num );
-		this.db.findAndReplace(new Query(where("_id").is(songId)), exist);
-		
-		return dbQueryStatus;
-		
-	}
+
+        }
+
+        exist.setSongAmountFavourites(exist.getSongAmountFavourites() + num);
+        this.db.findAndReplace(new Query(where("_id").is(songId)), exist);
+
+        return dbQueryStatus;
+    }
 }

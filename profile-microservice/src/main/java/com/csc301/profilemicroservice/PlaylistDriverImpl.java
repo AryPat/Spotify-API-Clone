@@ -27,19 +27,25 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 		}
 	}
 
+    /**
+     * 
+     * Like a song
+     * 
+     * @param userName the user name
+     * @param songId the songId
+     * @return dbQueryStatus the status of the request
+     */
 	@Override
 	public DbQueryStatus likeSong(String userName, String songId) {
 
 		StatementResult result = null;
-		StatementResult existsResult = null;
-		
+		StatementResult existsResult = null;	
 		DbQueryStatus dbQueryStatus = null;
 		
 		try (Session session = driver.session()) {			
 			try (Transaction trans = session.beginTransaction()) {
 				
 				// Check if user exists
-				
 				String userExistsQuery = "MATCH (pl:playlist {plName: \"" + userName + "-favourites\" }) RETURN pl";
 				
 				result = trans.run(userExistsQuery);
@@ -47,7 +53,6 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 				List<Record> userRecords = result.list();
 				
 				if (userRecords.isEmpty()) {
-					
 					dbQueryStatus = new DbQueryStatus("User not found", DbQueryExecResult.QUERY_ERROR_NOT_FOUND);
 					trans.failure();
 					
@@ -56,7 +61,6 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 				    String message = "put song in playlist";
 				
 					// Check if playlist and song relation exists
-					
 					String existsQuery = "MATCH (pl:playlist {plName: \"" + userName + "-favourites\" }), (s:song {songId: \"" + songId + "\" }) \n" +
 							"MATCH (pl)-[r:includes]-(s) \n" +
 							"RETURN r";
@@ -73,7 +77,6 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 					}
 					
 					// Add song to playlist
-					
 					String query = "MATCH (pl:playlist {plName: \"" + userName + "-favourites\" }) \n" +
 							"MERGE (s:song {songId: \"" + songId + "\" }) \n" + 
 							"MERGE (pl)-[r:includes]->(s)\n" +
@@ -82,16 +85,22 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 					trans.run(query);
 					
 					dbQueryStatus = new DbQueryStatus(message, DbQueryExecResult.QUERY_OK);
-					trans.success();
-					
+					trans.success();			
 				}
 			}			
 			session.close();
 		}
-		return dbQueryStatus;
-		
+		return dbQueryStatus;	
 	}
 
+    /**
+     * 
+     * un-like a song
+     * 
+     * @param userName the user name
+     * @param songId the songId
+     * @return dbQueryStatus the status of the request
+     */
 	@Override
 	public DbQueryStatus unlikeSong(String userName, String songId) {
 		
@@ -102,8 +111,7 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 		try (Session session = driver.session()) {			
 			try (Transaction trans = session.beginTransaction()) {
 				
-				// Check if user name already exists
-				
+				// Check if user name already exists				
 				String existsQuery = "MATCH (p:profile {userName: \"" + userName + "\"}) RETURN p";
 				
 				existsResult = trans.run(existsQuery);
@@ -116,8 +124,7 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 					String query = "MATCH (pl:playlist {plName: \"" + userName + "-favourites\" }), (pl)-[r:includes]->(:song {songId: \"" + songId + "\" })\n" +
 							"DELETE r";
 					
-					// Check if the user does not have a relation with the song 
-					
+					// Check if the user does not have a relation with the song 					
 					existsResult = trans.run(checkSong);
 					List<Record> check = existsResult.list();
 					
@@ -127,8 +134,7 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 	                    return dbQueryStatus;
 					}
 					
-					// User likes the song, therefore delete it from their playlist
-					
+					// User likes the song, therefore delete it from their playlist					
 					existsResult = trans.run(query);
 				
 					dbQueryStatus = new DbQueryStatus("Deleted song in playlist", DbQueryExecResult.QUERY_OK);
@@ -141,10 +147,16 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 			}
 			session.close();
 		}
-		return dbQueryStatus;
-		
+		return dbQueryStatus;	
 	}
 
+    /**
+     * 
+     * Delete song from db
+     * 
+     * @param songId the songId
+     * @return dbQueryStatus the status of the request
+     */
 	@Override
 	public DbQueryStatus deleteSongFromDb(String songId) {
 		
@@ -158,7 +170,6 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 			    // This is a helper function
 			    // This does not care if there EXISTED a song with a relation 
 			    // Just deletes all songs and gives OK message
-			    // Pretty Sure I am right...
 				
 				String existsQuery = "MATCH (s:song {songId: \"" + songId + "\"}) RETURN s";
 				
@@ -171,9 +182,7 @@ public class PlaylistDriverImpl implements PlaylistDriver {
 				trans.run(query);
 					
 				dbQueryStatus = new DbQueryStatus("Deleted song in database", DbQueryExecResult.QUERY_OK);
-				trans.success();
-					
-			
+				trans.success();		
 			}			
 			session.close();
 		}
