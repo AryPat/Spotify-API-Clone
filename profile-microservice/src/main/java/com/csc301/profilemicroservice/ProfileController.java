@@ -48,10 +48,12 @@ public class ProfileController {
 		this.playlistDriver = playlistDriver;
 	}
 
+	// Create a profile 
 	@RequestMapping(value = "/profile", method = RequestMethod.POST)
 	public @ResponseBody Map<String, Object> addProfile(@RequestParam Map<String, String> params,
 			HttpServletRequest request) {
 
+	    // Initiatialize variable
 		Map<String, Object> response = new HashMap<String, Object>();
 		
 		String userName = null;
@@ -68,20 +70,25 @@ public class ProfileController {
 			return response;
 		}
 		
+		// Method that calls the db
 		DbQueryStatus dbQueryStatus = profileDriver.createUserProfile(userName, fullName, password);
 		
+		// Response 
 		response.put("path", String.format("POST %s", Utils.getUrl(request)));
 		response = Utils.setResponseStatus(response, dbQueryStatus.getdbQueryExecResult(), dbQueryStatus.getData());
 		
 		return response;
 	}
 
+	// Follow a friend 
 	@RequestMapping(value = "/followFriend/{userName}/{friendUserName}", method = RequestMethod.PUT)
 	public @ResponseBody Map<String, Object> followFriend(@PathVariable("userName") String userName,
 			@PathVariable("friendUserName") String friendUserName, HttpServletRequest request) {
 
+	    // Initialize variable
 		Map<String, Object> response = new HashMap<String, Object>();
 		
+		// Check for BAD_REQUEST
 		if (userName == null || friendUserName == null) {
 			response.put("status", HttpStatus.BAD_REQUEST);
 			return response;
@@ -92,40 +99,43 @@ public class ProfileController {
             return response;
         }
 		
+		// method that calls db 
 		DbQueryStatus dbQueryStatus = profileDriver.followFriend(userName, friendUserName);
 		
+		// Response
 		response.put("path", String.format("PUT %s", Utils.getUrl(request)));
 		response.put("message", dbQueryStatus.getMessage());
 		response = Utils.setResponseStatus(response, dbQueryStatus.getdbQueryExecResult(), dbQueryStatus.getData());
 		
-		
 		return response;
 	}
 
+	// Get all friend's favourite song titles given user name
 	@RequestMapping(value = "/getAllFriendFavouriteSongTitles/{userName}", method = RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getAllFriendFavouriteSongTitles(@PathVariable("userName") String userName,
 			HttpServletRequest request) {
 
+	    // Method that calls db
 		DbQueryStatus dbQueryStatus = profileDriver.getAllSongFriendsLike(userName);
 		Map<String, Object> response = new HashMap<String, Object>();
 	
-		
-		// No such username found
-		
+		// Check if username exist 
 		if(dbQueryStatus.getdbQueryExecResult().equals(DbQueryExecResult.QUERY_ERROR_NOT_FOUND)) {
 		    response = Utils.setResponseStatus(response, DbQueryExecResult.QUERY_ERROR_NOT_FOUND, null);
 		    return response;
 		}
 		
-		// Go through all names, their ID and make a new hashmap for songname as value for keys instead
-		
+		// Change all songId's as values to their respective song title 
 		Map<String, List<String>> allSongsFriendsLike = (Map<String, List<String>>) dbQueryStatus.getData();
 		
+		// Go through each name 
 		for(String name : allSongsFriendsLike.keySet()) {
 		    List<String> songName = new ArrayList<String>();
 		    
+		    // Go through each songId
 		    for(String songId : allSongsFriendsLike.get(name)) {
 		        
+		        // get song title given the songId
 		        Request req = new Request.Builder().url("http://localhost:3001/getSongTitleById/"+songId).build();
 		        JSONObject reqJson;
 		        
@@ -135,11 +145,9 @@ public class ProfileController {
 		            
 		            // Return statement here cannot be tested 
 		            // Do not believe code will ever enter this if loop
-		            // Just in case! 
-		            
+		            // Just in case!   
 		            if(!reqJson.get("status").equals("OK")) {
 		                response.put("message", "Internal Error in Song Microservice!");
-		                System.out.println(reqJson);
 		                Utils.setResponseStatus(response, DbQueryExecResult.QUERY_ERROR_NOT_FOUND, null);
 		                return response;
 		            }       
@@ -151,45 +159,50 @@ public class ProfileController {
 		        
 		        
 		    }
+		    // Create the data to be returned
 		    allSongsFriendsLike.put(name, songName);
 		}
 		
+		// Response
 	    response.put("message", dbQueryStatus.getMessage());
 	    response.put("path", String.format("PUT %s", Utils.getUrl(request)));
-	    
 	    response = Utils.setResponseStatus(response, dbQueryStatus.getdbQueryExecResult(), allSongsFriendsLike);
-	    
 		return response;
 	}
 
-
+	// Unfollow a friend 
 	@RequestMapping(value = "/unfollowFriend/{userName}/{friendUserName}", method = RequestMethod.PUT)
 	public @ResponseBody Map<String, Object> unfollowFriend(@PathVariable("userName") String userName,
 			@PathVariable("friendUserName") String friendUserName, HttpServletRequest request) {
 
+	    // Initialize variable 
 		Map<String, Object> response = new HashMap<String, Object>();
 		
+		// Check for BAD_REQUEST 
 		if (userName == null || friendUserName == null) {
 			response.put("status", HttpStatus.BAD_REQUEST);
 			return response;
 		}
 		
+		// method that calls the db
 		DbQueryStatus dbQueryStatus = profileDriver.unfollowFriend(userName, friendUserName);
 		
+		// Response
 		response.put("path", String.format("PUT %s", Utils.getUrl(request)));
 		response = Utils.setResponseStatus(response, dbQueryStatus.getdbQueryExecResult(), dbQueryStatus.getData());		
 		
 		return response;
 	}
 
+	// Like a song
 	@RequestMapping(value = "/likeSong/{userName}/{songId}", method = RequestMethod.PUT)
 	public @ResponseBody Map<String, Object> likeSong(@PathVariable("userName") String userName,
 			@PathVariable("songId") String songId, HttpServletRequest request) {
 
+	    // Initialize variable
 		Map<String, Object> response = new HashMap<String, Object>();
 		
 		// Check if the song exist in the Song's database 
-		
 		Request req = new Request.Builder().url("http://localhost:3001/getSongById/"+songId).build();
 		
 		try(Response getReq = this.client.newCall(req).execute()){
@@ -206,36 +219,35 @@ public class ProfileController {
             e.printStackTrace();
         }
 		
-		
+		// Method that calls db
 		DbQueryStatus dbQueryStatus = playlistDriver.likeSong(userName, songId);
 				
 		// You check if the song is not in your playlist therefore you need to increment by 1 in Song's Database
-		// Note that this takes account if user likes multiple times
-		
+		// Only gets called if user does not LIKE the song originally
 		if(dbQueryStatus.getMessage().equals("put song in playlist")) {
+		    
+		    // Call Song-Microservice
 		    Request sendReq = new Request.Builder().url("http://localhost:3001/updateSongFavouritesCount/"+songId+"?shouldDecrement=false").put(new FormBody.Builder().build())
 		              .build();
 		    
 		    // Most likely this part of the code wont return.
 		    try (Response sentReq = this.client.newCall(sendReq).execute()){
+		        
 		        String reqBody = sentReq.body().string();
 		        JSONObject reqJson = new JSONObject(reqBody);
-		        System.out.println(reqJson);
 		        if(!reqJson.get("status").equals("OK")) {
 	                response.put("message", "Internal: Error when updating song's count");
 	                Utils.setResponseStatus(response, DbQueryExecResult.QUERY_ERROR_NOT_FOUND, null);
 	                return response;
 	            }   
-		        
-		        
+		       
 		    } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
-            }
-		    
+		    }
 		}
 		
-		
+		// Response
 		response.put("path", String.format("PUT %s", Utils.getUrl(request)));
 		response.put("message", dbQueryStatus.getMessage());
 		response = Utils.setResponseStatus(response, dbQueryStatus.getdbQueryExecResult(), dbQueryStatus.getData());
@@ -243,20 +255,22 @@ public class ProfileController {
 		return response;
 	}
 
+	// Unlike a song
 	@RequestMapping(value = "/unlikeSong/{userName}/{songId}", method = RequestMethod.PUT)
 	public @ResponseBody Map<String, Object> unlikeSong(@PathVariable("userName") String userName,
 			@PathVariable("songId") String songId, HttpServletRequest request) {
 
+	    // Initialize varialbe
 		Map<String, Object> response = new HashMap<String, Object>();
 		
 		// Check if the song exist in the Song's database 
-        
+		// Call Song-Microservice
         Request req = new Request.Builder().url("http://localhost:3001/getSongById/"+songId).build();
         
         try(Response getReq = this.client.newCall(req).execute()){
+            
             String reqBody = getReq.body().string();
             JSONObject reqJson = new JSONObject(reqBody);
-            
             if(!reqJson.get("status").equals("OK")) {
                 response.put("message", "Song does not exist!");
                 Utils.setResponseStatus(response, DbQueryExecResult.QUERY_ERROR_NOT_FOUND, null);
@@ -267,10 +281,10 @@ public class ProfileController {
             e.printStackTrace();
         }
         	
+        // method that calls the db
 		DbQueryStatus dbQueryStatus = playlistDriver.unlikeSong(userName, songId);
 		
 		// Check if you are liked with the song, if so, then decrease favourite by 1 after unliking in songs DB
-		
 		if(dbQueryStatus.getMessage().equals("Deleted song in playlist")) {
 	        Request sendReq = new Request.Builder().url("http://localhost:3001/updateSongFavouritesCount/"+songId+"?shouldDecrement=true").put(new FormBody.Builder().build())
                       .build();
@@ -293,21 +307,23 @@ public class ProfileController {
             }
 		}
 		
+		// Response 
 		response.put("path", String.format("PUT %s", Utils.getUrl(request)));
 		response.put("message", dbQueryStatus.getMessage());
 		response = Utils.setResponseStatus(response, dbQueryStatus.getdbQueryExecResult(), dbQueryStatus.getData());
-
 		return response;
 	}
 
+	// Delete song from database
 	@RequestMapping(value = "/deleteAllSongsFromDb/{songId}", method = RequestMethod.PUT)
 	public @ResponseBody Map<String, Object> deleteAllSongsFromDb(@PathVariable("songId") String songId,
 			HttpServletRequest request) {
 
-		
+		// Initialize variable 
 		Map<String, Object> response = new HashMap<String, Object>();
 		response.put("path", String.format("PUT %s", Utils.getUrl(request)));
 		
+		// Response
 		response = Utils.setResponseStatus(response, playlistDriver.deleteSongFromDb(songId).getdbQueryExecResult(), null);
 		return response;
 	}
