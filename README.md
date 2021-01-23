@@ -3,7 +3,7 @@
 
 In a team of 2, we utilized **Microservices** for future extensibility and **Java Spring Boot** to develop a **REST API** that mimics Spotify
 
-We used two **Microservices** `Profile ` and `Songs`
+We used two **Microservices** `Profile` and `Songs`
 
 ## Technologies Used
 
