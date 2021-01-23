@@ -1,9 +1,9 @@
 
 # Spotify API Clone
 
-In teams of 2, we utilized **Microservices** for future extensibility and **Java Spring Boot** to develop a **REST API** that mimics Spotify
+In teams of 2, we utilized **microservices** for future extensibility and **Java Spring Boot** to develop a **REST API** that mimics Spotify
 
-We used two **Microservices** `Profile` and `Songs`
+We used two **microservices** called `profile-microservice` and `song-microservice`
 
 ## Technologies Used
 
